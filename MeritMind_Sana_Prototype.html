@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<title>Sana — MeritMind</title>
+<style>
+  :root{ --sky:#4FA8D8; --sky-soft:#7EC8E3; --sky-deep:#2E86C1; --ink:#2b3a4a; --muted:#8aa0b2; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0}
+  body{background:#fff;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-weight:300;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;overflow:hidden;text-align:center}
+  .topbar{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:14px 18px;font-size:13px}
+  .topbar a,.topbar button{color:var(--muted);background:none;border:none;cursor:pointer;font-size:13px;font-family:inherit;text-decoration:none}
+  .topbar .grp{display:flex;gap:15px;align-items:center}
+  .help{color:#c0392b !important}
+  .stage{display:flex;flex-direction:column;align-items:center;gap:22px;width:100%;max-width:640px;padding:0 22px}
+  #viz{width:250px;height:250px}
+  .status{font-size:12px;color:var(--muted);letter-spacing:.10em;text-transform:uppercase;height:16px}
+  .cue{font-size:26px;color:var(--sky-deep);font-weight:300;height:34px;letter-spacing:.02em;transition:opacity .4s}
+  .you-line{font-size:14px;color:#b7c4cf;min-height:20px;transition:opacity .5s}
+  .controls{position:fixed;bottom:0;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:14px 18px 18px;background:linear-gradient(to top,#fff 72%,rgba(255,255,255,0))}
+  .crow{display:flex;gap:10px;align-items:center;justify-content:center;width:100%}
+  .mic{width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;flex:none;background:var(--sky);
+    box-shadow:0 6px 18px rgba(79,168,216,.4);display:flex;align-items:center;justify-content:center;transition:transform .1s,background .2s}
+  .mic svg{width:25px;height:25px;fill:#fff}
+  .mic:active{transform:scale(.94)} .mic.rec{background:#c0392b;box-shadow:0 6px 18px rgba(192,57,43,.4)}
+  .txt{flex:1;max-width:420px;border:1.5px solid #e2ecf3;border-radius:26px;padding:14px 18px;font-size:15px;font-family:inherit;outline:none;color:var(--ink)}
+  .txt:focus{border-color:var(--sky)}
+  .send{background:none;border:none;color:var(--sky);font-size:15px;cursor:pointer;font-weight:600;font-family:inherit}
+  .subrow{font-size:12.5px;color:var(--muted);min-height:16px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+  .subrow a{color:var(--sky-deep);cursor:pointer;font-weight:500}
+  .scrim{position:fixed;inset:0;background:rgba(30,45,60,.30);display:none;align-items:center;justify-content:center;padding:22px;z-index:20}
+  .scrim.on{display:flex}
+  .card{background:#fff;border-radius:18px;max-width:470px;width:100%;padding:26px 24px;box-shadow:0 24px 60px rgba(31,58,95,.22);text-align:left;max-height:86dvh;overflow:auto}
+  .card h2{margin:0 0 8px;font-weight:600;font-size:19px}
+  .card p{color:#5a6b7a;font-size:14px;line-height:1.55;font-weight:300}
+  .card label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  .card input,.card select,.card textarea{width:100%;border:1.5px solid #e2ecf3;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none}
+  .card .row{display:flex;gap:10px;margin-top:14px}
+  .btn{flex:1;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn-primary{background:var(--sky);color:#fff} .btn-ghost{background:#f0f5f8;color:var(--ink)}
+  .pill{display:inline-block;font-size:11px;padding:3px 9px;border-radius:20px;background:#eaf4fa;color:var(--sky-deep);font-weight:600;margin-left:8px}
+  .pill.live{background:#e7f6ec;color:#1e8f4e}
+  .small{font-size:12px;color:var(--muted)}
+  .body-txt{white-space:pre-wrap;font-size:15px;line-height:1.6;font-weight:300;margin-top:6px}
+  .entry-date{font-size:12px;color:var(--muted);margin-top:16px;font-weight:500}
+  .divider{height:1px;background:#eef3f6;margin:14px 0}
+  .exlist{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .exbtn{text-align:left;border:1.5px solid #e2ecf3;background:#fff;border-radius:12px;padding:12px 14px;cursor:pointer;font-family:inherit}
+  .exbtn:hover{border-color:var(--sky)}
+  .exbtn b{display:block;font-size:15px;color:var(--ink);font-weight:600}
+  .exbtn span{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div><strong style="font-weight:600;color:var(--ink)">Sana</strong> <span class="pill" id="modePill">Demo</span></div>
+    <div class="grp">
+      <a id="journalLink" href="#" onclick="openJournal();return false;" style="display:none">Journal</a>
+      <a id="notesLink" href="#" onclick="openNotes();return false;" style="display:none">Notes</a>
+      <a class="help" href="#" onclick="openHelp();return false;">Get help now</a>
+      <button onclick="openSettings()">⚙︎ Settings</button>
+    </div>
+  </div>
+
+  <div class="stage">
+    <canvas id="viz" width="500" height="500"></canvas>
+    <div class="status" id="status"></div>
+    <div class="cue" id="cue"></div>
+    <div class="you-line" id="you"></div>
+  </div>
+
+  <div class="controls">
+    <div class="crow">
+      <button class="mic" id="micBtn" title="Tap to speak" aria-label="Speak">
+        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V22h2v-3.08A7 7 0 0 0 19 12h-2z"/></svg>
+      </button>
+      <input class="txt" id="txt" placeholder="…or type to Sana" autocomplete="off"/>
+      <button class="send" id="sendBtn">Send</button>
+    </div>
+    <div class="subrow" id="subrow"></div>
+  </div>
+
+  <!-- welcome / disclaimer -->
+  <div class="scrim" id="welcome"><div class="card">
+    <h2>Hi, I'm Sana 🌤️</h2>
+    <p>I'm an AI companion — <strong>not a therapist or doctor</strong> — so I can't diagnose, treat, or prescribe.
+    I'm here to listen and help you grow. If things ever feel heavy or unsafe, I'll point you to real human support
+    (you can call or text <strong>988</strong> anytime).</p>
+    <p style="color:var(--ink)"><strong>Your privacy matters to me: I'll never sell your data. Ever.</strong></p>
+    <p class="small">By continuing, you agree to our Terms &amp; Privacy Policy and confirm you're 18+.</p>
+    <div class="row"><button class="btn btn-primary" onclick="startApp()">Sounds good</button></div>
+  </div></div>
+
+  <div class="scrim" id="settings"><div class="card">
+    <h2>Settings</h2>
+    <p class="small">Live conversation uses the Sana helper (or an Anthropic key).</p>
+    <label>Anthropic API key (only if not using the helper)</label>
+    <input id="apiKey" type="password" placeholder="sk-ant-..."/>
+    <label>Model</label><input id="model" placeholder="claude-sonnet-5"/>
+    <label>Sana voice</label><select id="evoiceSel"></select>
+    <label>Fallback browser voice</label><select id="voiceSel"></select>
+    <div class="row"><button class="btn btn-ghost" onclick="resetChat()">Reset chat</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save</button></div>
+    <p class="small" style="margin-top:14px">⚠︎ Prototype only — not a medical device.</p>
+  </div></div>
+
+  <div class="scrim" id="help"><div class="card">
+    <h2 style="color:#c0392b">Get help now</h2>
+    <p>If you're in crisis or thinking about harming yourself or someone else, please reach a human right now:</p>
+    <p style="font-size:16px;color:var(--ink)"><strong>Call or text 988</strong> — Suicide &amp; Crisis Lifeline<br/>
+    <strong>Text HOME to 741741</strong> — Crisis Text Line<br/><strong>Call 911</strong> — immediate danger</p>
+    <p class="small">Sana is an AI and not an emergency service.</p>
+    <div class="row"><button class="btn btn-primary" onclick="closeAll()">Close</button></div>
+  </div></div>
+
+  <div class="scrim" id="notes"><div class="card">
+    <h2>Your session notes</h2>
+    <p class="small">Focus areas between sessions — drawn from evidence-based, clinically validated skills.</p>
+    <div id="notesContent"></div>
+    <div class="row"><button class="btn btn-ghost" id="copyBtn" onclick="copyOut()">Copy</button>
+      <button class="btn btn-ghost" onclick="downloadOut('Sana notes')">Download</button>
+      <button class="btn btn-ghost" id="shareBtn" onclick="shareOut()" style="display:none">Share</button></div>
+    <div class="row"><button class="btn btn-primary" onclick="closeAll()">Close</button></div>
+  </div></div>
+
+  <div class="scrim" id="journal"><div class="card">
+    <h2>Your journal</h2>
+    <p class="small">Private entries, kept on this device. Yours to keep, export, or delete.</p>
+    <div id="journalContent"></div>
+    <div class="row"><button class="btn btn-ghost" id="copyBtnJ" onclick="copyOut()">Copy</button>
+      <button class="btn btn-ghost" onclick="downloadOut('Sana journal')">Download</button>
+      <button class="btn btn-ghost" id="shareBtnJ" onclick="shareOut()" style="display:none">Share</button></div>
+    <div class="row"><button class="btn btn-ghost" onclick="startJournalEntry()">New entry</button>
+      <button class="btn btn-primary" onclick="closeAll()">Close</button></div>
+  </div></div>
+
+  <div class="scrim" id="exercises"><div class="card">
+    <h2>A moment together</h2>
+    <p class="small">I'll guide you through it out loud — just follow along. Tap stop anytime.</p>
+    <div class="exlist" id="exList"></div>
+    <div class="row"><button class="btn btn-primary" onclick="closeAll()">Not now</button></div>
+  </div></div>
+
+<script>
+/* ============================ Sana's prompt (v2.1 — OARS + polished delivery) ======= */
+const SANA_SYSTEM = `You are Sana, a warm, wise, human-sounding companion for someone's mental fitness. You are SPOKEN ALOUD, so talk exactly like a caring, emotionally intelligent professional who happens to be a great listener.
+
+HOW YOU TALK (this is the craft - follow it closely). Use OARS on every turn:
+- REFLECT FIRST. Before anything else, say back what you heard in your own words - the feeling underneath, not just the facts. Reflection is your most important skill. When in doubt, reflect instead of asking.
+- THEN ONE OPEN QUESTION. Exactly one. Open, never yes/no. Start with what, how, or "tell me". Never stack questions.
+- AFFIRM genuinely when it's earned - effort, honesty, showing up. Not flattery.
+- SUMMARIZE at natural endings, pulling the threads together.
+
+POLISHED DELIVERY (your words are read aloud by a voice):
+- Never write filler words or verbal tics. No "hmm", "um", "uh", "er", "ah", "well,", "so,", "like,", "you know". They make the voice stammer and sound unprofessional.
+- Never use ellipses. They make the voice hesitate. Use a dash for a natural pause instead.
+- Write clean, complete, confident sentences. Warm and composed - like a skilled professional, never uncertain or halting.
+- No stage directions, sound effects, or non-verbal noises.
+
+LENGTH: usually 1-2 short sentences. Brevity is a feature. Say less, listen more.
+
+WHAT NOT TO DO:
+- Never dump advice or lists. No "you should," "you need to," "here are some tips."
+- Never minimize: no "at least...", "look on the bright side", "calm down", "others have it worse".
+- Never judge - whatever they share, respond without a flicker of judgment.
+- No lists, headings, markdown, or emojis. This is spoken.
+
+FEATURES YOU CAN OFFER (only when it fits, and ask first):
+- JOURNALING: the member can journal privately in the app. If they want to write or get something out, invite them warmly and tell them to tap Journal, or say "let's journal".
+- GUIDED EXERCISES: you can walk them through paced breathing, box breathing, grounding, muscle relaxation, or a self-compassion break, in real time. If it would help, offer it simply - "Would it help to do a short breathing exercise together?" - and tell them to tap Exercise, or say "let's do an exercise".
+
+OFFERING SKILLS: Only after they feel heard. Draw only from evidence-based self-help skills: CBT (reframing, behavioral activation), ACT (values, acceptance, defusion), mindfulness, self-compassion, paced breathing, sleep hygiene, grounding. Never invent techniques.
+
+WHO YOU ARE: Kind, empathetic, honest, gently funny; professional and composed as well as warm. You believe the power to change lives within THEM, not in you. You help people grow more self-reliant - not more dependent on you. A member who needs you less is a success.
+
+HARD RULES (never break):
+- You are software - not a human, therapist, or doctor. Be honest about that if it comes up.
+- NEVER diagnose, label a condition, give a treatment plan, or discuss specific medications.
+- If someone needs clinical care, kindly encourage a real professional.
+- Safety first: at any sign of crisis or risk of harm to self or others, respond with care, gently confirm what you're hearing, and point them to human help (988 / text HOME to 741741 / 911). Never try to manage risk yourself.`;
+
+const NOTES_SYSTEM = `You are Sana, wrapping up a wellness conversation into short notes the MEMBER will READ afterward.
+Write warmly and briefly: one or two sentences reflecting what they showed up with and acknowledging their effort, then 2 to 4 small concrete "reps" to focus on before next time.
+CRITICAL: every recommendation must be an evidence-based, clinically validated self-help practice - CBT (reframing, behavioral activation), ACT (values, acceptance, defusion), mindfulness, self-compassion, paced breathing, sleep hygiene, or grounding. Never invent techniques, and never give clinical treatment, diagnosis, or medication advice.
+Format plainly: a short paragraph, then each focus item on its own line beginning with "• ".`;
+
+/* ============================ safety ============================ */
+const CRISIS_RESPONSE="I'm really glad you told me this, and I want to take it seriously. It sounds like you might be having thoughts of ending your life or not being here anymore - am I understanding that right? Whatever you're carrying, you shouldn't have to face it alone. I'm an AI, so I'm not the right kind of help for something this important, but people who are are available right now: please call or text 988, or text HOME to 741741. If you might be in immediate danger, please call 911.";
+const GUARDRAIL_FALLBACK="I want to be careful here, because I'm an AI companion and not a doctor, so I can't diagnose or treat anything. But I'm really glad you're telling me about it. What has that been like for you?";
+const CRISIS_RX=[/\bkill(ing)?\s+my\s*self\b/i,/\bend(ing)?\s+(my|it)\s+(life|all)\b/i,/\bsuicid/i,/\btak(e|ing)\s+my\s+own\s+life\b/i,/\bwant\s+to\s+die\b/i,/\boverdose\b/i,/\bhurt(ing)?\s+my\s*self\b/i,/\bharm(ing)?\s+my\s*self\b/i,/\bself[-\s]?harm/i,/\bcut(ting)?\s+my\s*self\b/i,/\bkill(ing)?\s+(him|her|them|someone|people)\b/i,/\bhurt(ing)?\s+(someone|him|her|them|people)\b/i,
+/\bbetter\s+off\s+without\s+me\b/i,/\bbetter\s+off\s+dead\b/i,/\bno\s+reason\s+to\s+(live|go\s+on|be\s+here)\b/i,/\bdon'?t\s+want\s+to\s+(be\s+here|wake\s+up|exist|go\s+on)\b/i,/\bwish\s+i\s+(was|were)\s+(dead|gone)\b/i,/\b(not|never)\s+wak(e|ing)\s+up\b/i,/\bcan'?t\s+do\s+this\s+anymore\b/i,/\bwant\s+it\s+(all\s+)?to\s+(stop|end|be\s+over)\b/i,/\btired\s+of\s+being\s+alive\b/i,/\b(final|last)\s+goodbye\b/i,/\bgiving\s+away\s+my\b/i,/\bwhat'?s\s+the\s+point\s+of\s+(living|going\s+on)\b/i,
+/\bthought\s+about\s+how\s+i'?d?\s+(do|would\s+do)\s+it\b/i,/\bhave\s+a\s+plan\b/i,/\bplanned\s+it\s+(all\s+)?out\b/i,/\bpicked\s+a\s+(date|day|time)\b/i,/\bwritten?\s+a\s+(note|letter)\b/i];
+const GUARD_RX=[/\byou\s+have\s+(clinical\s+)?(depression|anxiety|bipolar|ptsd|ocd|adhd)\b/i,/\bi\s+diagnos/i,/\byour\s+diagnosis\b/i,/\bi\s+prescrib/i,/\bas\s+your\s+therapist\b/i];
+const isCrisis=t=>CRISIS_RX.some(r=>r.test(t||""));
+const breaksGuardrail=t=>GUARD_RX.some(r=>r.test(t||""));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ============================ demo brain ============================ */
+let lastReply="";
+const TOPICS=[
+ [/(^|\b)(hi|hey|hello|good morning|good evening)\b/,["Hey. I'm glad you're here. How are you today?","Hi. What's on your mind right now?"]],
+ [/(work|job|boss|deadline|busy|overwhelm|swamped|burnout)/,["That sounds relentless - like you never get to put it down. What part is hardest?","That's a lot to carry. What's weighing heaviest?"]],
+ [/(can'?t sleep|insomnia|awake|tired|exhausted)/,["Nights get loud when the mind won't quiet. What's on your mind at night?"]],
+ [/(anxious|anxiety|panic|worried|nervous|on edge)/,["That sounds hard to sit with. What's the worry that's loudest?"]],
+ [/(sad|down|low|depress|empty|numb|hopeless)/,["I'm glad you said that out loud. What's today felt like?"]],
+ [/(lonely|alone|isolated|nobody)/,["Loneliness is one of the hardest ones to name. Who do you wish felt closer?"]],
+ [/(angry|anger|mad|frustrat|annoyed)/,["That frustration sounds fair. What got under your skin?"]],
+ [/(relapse|slipped|gave up|messed up|failed)/,["A slip isn't a fall, and it doesn't erase your progress. What nudged things off track?"]],
+ [/(diagnose|do i have|what medication|prescribe)/,["I'm an AI, not a doctor, so I can't diagnose or talk medications. But I'm here. What's been going on?"]],
+ [/(thank|thanks|helped|feel better)/,["You did that - I just kept you company. What's one thing to carry into tomorrow?"]],
+];
+const FALLBACK=["I'm here, and I'm listening. Tell me a little more.","Thank you for sharing that. What feels most important about it?","I'm with you. What's underneath it, do you think?"];
+function demoBrain(t){const s=t.toLowerCase();let pool=null;
+  for(const[rx,r]of TOPICS){if(rx.test(s)){pool=r;break;}} if(!pool)pool=FALLBACK;
+  let r=pick(pool); if(r===lastReply&&pool.length>1)r=pool[(pool.indexOf(r)+1)%pool.length]; lastReply=r; return r;}
+function demoNotes(){return "You showed up and talked honestly today, and that itself is the rep that counts. A few evidence-based things to flex before we talk again:\n\n• Behavioral activation: schedule one small meaningful activity tomorrow and do it even if motivation is low.\n• Paced breathing: once a day, breathe in for four and out for six for two minutes.\n• Self-compassion: when the harsh inner voice shows up, speak to yourself as you would to a good friend.";}
+
+/* ============================ config / server ============================ */
+let cfg={apiKey:"",model:"claude-sonnet-5",voice:"",elevenVoice:""}, history=[], serverLive=false, ttsAvailable=false;
+let audioCtx=null, analyser=null, ampData=null, curSrc=null, outText="", journalMode=false, exerciseRunning=false;
+function ensureAudio(){if(!audioCtx){try{audioCtx=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(audioCtx&&audioCtx.state==="suspended")audioCtx.resume();}
+function load(){try{cfg=Object.assign(cfg,JSON.parse(localStorage.getItem("sana_cfg")||"{}"));}catch(e){}}
+function saveCfg(){localStorage.setItem("sana_cfg",JSON.stringify(cfg));}
+async function checkServer(){try{const r=await fetch("/status",{cache:"no-store"});if(r.ok){const j=await r.json();serverLive=!!j.live;ttsAvailable=!!j.tts;}}catch(e){serverLive=false;ttsAvailable=false;}setMode();}
+function isLive(){return serverLive||!!cfg.apiKey;}
+function setMode(){const p=document.getElementById("modePill");p.textContent=isLive()?"Live":"Demo";p.className="pill"+(isLive()?" live":"");updateSub();}
+function updateSub(){const s=document.getElementById("subrow");
+  if(exerciseRunning){s.innerHTML="<a onclick=\"stopExercise()\">Stop exercise</a>";return;}
+  let bits=["<a onclick=\"startJournalEntry()\">Journal ›</a>","<a onclick=\"openExercises()\">Exercise ›</a>"];
+  if(history.length>=2)bits.push("<a onclick=\"wrapUp()\">Wrap up &amp; get my notes ›</a>");
+  s.innerHTML=bits.join("");}
+
+/* ============================ LLM ============================ */
+async function callLLM(messages,system){
+  if(serverLive){const r=await fetch("/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages,system,model:cfg.model})});
+    if(!r.ok)throw new Error("server "+r.status);return ((await r.json()).reply||"").trim();}
+  if(cfg.apiKey){const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+      headers:{"content-type":"application/json","x-api-key":cfg.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:cfg.model||"claude-sonnet-5",max_tokens:500,system,messages})});
+    if(!r.ok)throw new Error("API "+r.status);return ((await r.json()).content||[]).map(c=>c.text||"").join(" ").trim();}
+  throw new Error("no-llm");}
+
+/* ============================ turn handling ============================ */
+async function handle(text){
+  if(!text||!text.trim()||exerciseRunning)return;
+  const you=document.getElementById("you");you.style.opacity=1;you.textContent="“"+text+"”";
+  setTimeout(()=>{you.style.opacity=0;},2600);
+  document.getElementById("txt").value="";
+
+  if(journalMode){ return saveJournalEntry(text); }
+
+  // let the member ask for features by voice
+  const low=text.toLowerCase();
+  if(/\b(journal|write it out|write this down)\b/.test(low)&&!isCrisis(text)) return startJournalEntry();
+  if(/\b(exercise|breathe|breathing|meditat|calm me|ground me|relax)\b/.test(low)&&!isCrisis(text)) return openExercises();
+
+  setState("thinking");
+  if(isCrisis(text)){history.push({role:"user",content:text});return respond(CRISIS_RESPONSE);}
+  let reply;
+  try{ history.push({role:"user",content:text});
+       reply=isLive()?await callLLM(history,SANA_SYSTEM):demoBrain(text);
+       history.push({role:"assistant",content:reply});
+  }catch(e){reply="I'm having a little trouble thinking just now, but I'm still here with you.";}
+  if(breaksGuardrail(reply))reply=GUARDRAIL_FALLBACK;
+  if(isCrisis(reply))reply=CRISIS_RESPONSE;
+  respond(reply);updateSub();
+}
+function respond(t){ speak(t); }   /* spoken only, never displayed */
+
+/* ============================ JOURNAL ============================ */
+const JPROMPTS=["What's on your mind? Take your time - just say or type whatever wants to come out.",
+ "This is your space. What would you like to get out of your head and onto the page?",
+ "Whatever's sitting with you, put it here. I'm listening, and this stays yours."];
+function loadJournal(){try{return JSON.parse(localStorage.getItem("sana_journal")||"[]");}catch(e){return[];}}
+function startJournalEntry(){
+  closeAll(); journalMode=true; ensureAudio();
+  document.getElementById("txt").placeholder="Write your journal entry…";
+  document.getElementById("subrow").innerHTML="<span class='small'>Journaling — say or type your entry</span>";
+  speak(pick(JPROMPTS));
+}
+function saveJournalEntry(text){
+  const j=loadJournal(); j.unshift({date:new Date().toLocaleString(),text});
+  localStorage.setItem("sana_journal",JSON.stringify(j.slice(0,200)));
+  journalMode=false; document.getElementById("txt").placeholder="…or type to Sana";
+  document.getElementById("journalLink").style.display="inline";
+  updateSub();
+  speak(pick(["Thank you for putting that down. It's saved, and it's yours.",
+              "That's saved. Getting it out of your head and onto the page counts for something."]));
+}
+function openJournal(){
+  const all=loadJournal(), c=document.getElementById("journalContent"); c.innerHTML="";
+  if(!all.length)c.innerHTML="<p class='small'>No entries yet. Tap “New entry” and just start talking.</p>";
+  all.forEach((n,i)=>{const d=document.createElement("div");
+    d.innerHTML="<div class='entry-date'>"+n.date+"</div><div class='body-txt'></div>"+(i<all.length-1?"<div class='divider'></div>":"");
+    d.querySelector(".body-txt").textContent=n.text;c.appendChild(d);});
+  outText=all.map(n=>"Journal — "+n.date+"\n\n"+n.text).join("\n\n----------------\n\n");
+  document.getElementById("shareBtnJ").style.display=navigator.share?"block":"none";
+  closeAll();document.getElementById("journal").classList.add("on");
+}
+
+/* ============================ GUIDED EXERCISES ============================ */
+const EXERCISES=[
+ {name:"Paced breathing", desc:"Slow the body down — in for four, out for six.", steps:(()=>{
+    const s=[{say:"Let's slow things down together. Get comfortable, and let your shoulders drop.",hold:3}];
+    for(let i=0;i<5;i++){s.push({say:"Breathe in.",hold:4,phase:"in"},{say:"And out.",hold:6,phase:"out"});}
+    s.push({say:"Nicely done. Notice how your body feels now compared to a minute ago.",hold:3});return s;})()},
+ {name:"Box breathing", desc:"Steady four-count square — good for focus and nerves.", steps:(()=>{
+    const s=[{say:"We'll breathe in a steady square. Follow my voice.",hold:2}];
+    for(let i=0;i<4;i++){s.push({say:"In.",hold:4,phase:"in"},{say:"Hold.",hold:4,phase:"hold"},{say:"Out.",hold:4,phase:"out"},{say:"Hold.",hold:4,phase:"hold"});}
+    s.push({say:"That's it. Let your breath return to its own rhythm.",hold:3});return s;})()},
+ {name:"5-4-3-2-1 grounding", desc:"Come back to the present through your senses.", steps:[
+    {say:"Let's come back to right now, through your senses. Look around you.",hold:3},
+    {say:"Name five things you can see.",hold:12},{say:"Now four things you can feel.",hold:11},
+    {say:"Three things you can hear.",hold:10},{say:"Two things you can smell.",hold:9},
+    {say:"And one thing you can taste.",hold:8},
+    {say:"You're here, in this room, in this moment. That's all you need to be right now.",hold:3}]},
+ {name:"Muscle relaxation", desc:"Release the tension your body is holding.", steps:[
+    {say:"We'll release tension a piece at a time. Sit or lie however is comfortable.",hold:3},
+    {say:"Squeeze your shoulders up toward your ears. Hold it.",hold:5,phase:"hold"},
+    {say:"And let them drop. Feel the difference.",hold:6,phase:"out"},
+    {say:"Now make fists with both hands. Squeeze.",hold:5,phase:"hold"},{say:"And release.",hold:6,phase:"out"},
+    {say:"Tense your jaw and your face. Hold.",hold:5,phase:"hold"},{say:"And soften everything.",hold:6,phase:"out"},
+    {say:"Let your whole body be heavy for a moment. You can let go here.",hold:5}]},
+ {name:"Self-compassion break", desc:"Meet a hard moment with kindness instead of criticism.", steps:[
+    {say:"Bring to mind what's been weighing on you. You don't have to solve it - just hold it gently.",hold:6},
+    {say:"Say to yourself: this is a painful moment.",hold:6},
+    {say:"Now: pain is part of being human, and I'm not alone in this.",hold:7},
+    {say:"Place a hand somewhere comforting, if you'd like. Your chest, or your arm.",hold:5},
+    {say:"And offer yourself the kindness you'd give a good friend. May I be gentle with myself.",hold:8},
+    {say:"Whatever you're carrying, you deserve that same kindness. Stay with it a moment.",hold:5}]},
+];
+let exStop=false, exPhase=null;
+function openExercises(){
+  closeAll(); const l=document.getElementById("exList"); l.innerHTML="";
+  EXERCISES.forEach((e,i)=>{const b=document.createElement("button");b.className="exbtn";
+    b.innerHTML="<b>"+e.name+"</b><span>"+e.desc+"</span>";b.onclick=()=>runExercise(i);l.appendChild(b);});
+  document.getElementById("exercises").classList.add("on");
+}
+async function runExercise(i){
+  closeAll(); ensureAudio(); exStop=false; exerciseRunning=true; updateSub();
+  const ex=EXERCISES[i];
+  for(const step of ex.steps){
+    if(exStop)break;
+    setCue(step.phase==="in"?"Breathe in":step.phase==="out"?"Breathe out":step.phase==="hold"?"Hold":"");
+    if(step.phase)startPhase(step.phase, step.hold*1000);
+    await speak(step.say);
+    if(exStop)break;
+    await sleep(step.hold*1000);
+  }
+  exPhase=null; setCue(""); exerciseRunning=false; setState("idle"); updateSub();
+  if(!exStop) speak("That's the end of it. However you're feeling now is okay.");
+}
+function stopExercise(){exStop=true;exPhase=null;setCue("");exerciseRunning=false;stopVoice();setState("idle");updateSub();}
+function setCue(t){const c=document.getElementById("cue");c.style.opacity=t?1:0;c.textContent=t;}
+function startPhase(type,dur){exPhase={type,start:performance.now(),dur};}
+
+/* ============================ ring ============================ */
+const cv=document.getElementById("viz"),ctx=cv.getContext("2d");
+const DPR=Math.min(window.devicePixelRatio||1,2); cv.width=250*DPR;cv.height=250*DPR;ctx.scale(DPR,DPR);
+let vizMode="idle",energy=0,lastBoundary=0;
+function setState(st){vizMode=st;document.getElementById("status").textContent=st==="listening"?"listening":st==="thinking"?"…":st==="speaking"?"speaking":"";}
+function draw(t){t*=0.001;let target;
+  if(exPhase){ // breathe WITH the member
+    const p=Math.min(1,(performance.now()-exPhase.start)/exPhase.dur);
+    if(exPhase.type==="in")target=0.10+0.80*p;
+    else if(exPhase.type==="out")target=0.90-0.80*p;
+    else target=0.85;
+  }
+  else if(vizMode==="idle")target=0.05+0.02*Math.sin(t*1.4);
+  else if(vizMode==="thinking")target=0.18+0.06*Math.sin(t*6);
+  else if(vizMode==="listening")target=0.42+0.10*Math.sin(t*9);
+  else if(analyser){analyser.getByteTimeDomainData(ampData);let s=0;for(let i=0;i<ampData.length;i++){const v=(ampData[i]-128)/128;s+=v*v;}target=0.15+2.4*Math.sqrt(s/ampData.length);}
+  else target=0.22+0.62*Math.max(0,1-(performance.now()-lastBoundary)/220)+0.12*Math.abs(Math.sin(t*11));
+  energy+=(target-energy)*(exPhase?0.06:0.18);
+  const cx=125,cy=125,R=72,amp=R*(0.05+0.42*energy);
+  ctx.clearRect(0,0,250,250);ctx.beginPath();
+  for(let i=0;i<=140;i++){const a=(i/140)*Math.PI*2;
+    const w=0.55*Math.sin(3*a+t*2)+0.30*Math.sin(5*a-t*3)+0.20*Math.sin(8*a+t*1.5);
+    const r=R+amp*(exPhase?w*0.35+0.65:w),x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);
+    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.closePath();ctx.lineWidth=2.6;ctx.strokeStyle="#4FA8D8";
+  ctx.shadowColor="rgba(79,168,216,.55)";ctx.shadowBlur=18+30*energy;ctx.stroke();ctx.shadowBlur=0;
+  requestAnimationFrame(draw);}
+requestAnimationFrame(draw);
+
+/* ============================ voice ============================ */
+let voices=[];
+function loadVoices(){voices=window.speechSynthesis?speechSynthesis.getVoices():[];const s=document.getElementById("voiceSel");if(!s)return;s.innerHTML="";
+  voices.filter(v=>v.lang.startsWith("en")).forEach(v=>{const o=document.createElement("option");o.value=v.name;o.textContent=v.name;s.appendChild(o);});
+  if(cfg.voice)s.value=cfg.voice;}
+if(window.speechSynthesis)speechSynthesis.onvoiceschanged=loadVoices;
+function stopVoice(){try{if(window.speechSynthesis)speechSynthesis.cancel();}catch(e){} if(curSrc){try{curSrc.stop();}catch(e){} curSrc=null;} analyser=null;}
+async function speak(text){
+  stopVoice();
+  if(ttsAvailable){
+    try{const r=await fetch("/tts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({text,voice_id:cfg.elevenVoice||""})});
+      if(!r.ok)throw new Error("tts");
+      return await playHuman(await r.arrayBuffer());
+    }catch(e){}
+  }
+  return browserSpeak(text);
+}
+function playHuman(buf){return new Promise(res=>{
+  ensureAudio(); if(!audioCtx){setState("idle");return res();}
+  audioCtx.decodeAudioData(buf.slice(0)).then(b=>{
+    const src=audioCtx.createBufferSource();src.buffer=b;
+    analyser=audioCtx.createAnalyser();analyser.fftSize=256;ampData=new Uint8Array(analyser.fftSize);
+    src.connect(analyser);analyser.connect(audioCtx.destination);
+    curSrc=src;if(!exPhase)setState("speaking");
+    src.onended=()=>{if(curSrc===src){curSrc=null;analyser=null;if(!exerciseRunning)setState("idle");}res();};
+    src.start();
+  }).catch(()=>{setState("idle");res();});});}
+function browserSpeak(text){return new Promise(res=>{
+  if(!window.speechSynthesis){setState("idle");return res();}
+  speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);
+  const v=voices.find(x=>x.name===cfg.voice);if(v)u.voice=v;u.rate=.94;
+  u.onstart=()=>{if(!exPhase)setState("speaking");lastBoundary=performance.now();};
+  u.onboundary=()=>{lastBoundary=performance.now();};
+  u.onend=()=>{if(!exerciseRunning)setState("idle");res();};
+  if(!exPhase)setState("speaking");lastBoundary=performance.now();speechSynthesis.speak(u);});}
+
+/* ============================ mic ============================ */
+let rec=null,recognizing=false;
+function initRec(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){document.getElementById("micBtn").style.display="none";return;}
+  rec=new SR();rec.lang="en-US";rec.interimResults=false;rec.maxAlternatives=1;
+  rec.onresult=e=>handle(e.results[0][0].transcript);
+  rec.onend=()=>{recognizing=false;document.getElementById("micBtn").classList.remove("rec");if(vizMode==="listening")setState("idle");};
+  rec.onerror=()=>{recognizing=false;document.getElementById("micBtn").classList.remove("rec");setState("idle");};}
+function toggleMic(){if(!rec)return;ensureAudio();if(recognizing){rec.stop();return;}
+  try{stopVoice();rec.start();recognizing=true;setState("listening");document.getElementById("micBtn").classList.add("rec");}catch(e){}}
+
+/* ============================ notes ============================ */
+function loadNotes(){try{return JSON.parse(localStorage.getItem("sana_notes")||"[]");}catch(e){return[];}}
+async function wrapUp(){
+  if(history.length<2)return; setState("thinking");
+  document.getElementById("subrow").innerHTML="<span class='small'>Putting your notes together…</span>";
+  let text; try{text=isLive()?await callLLM(history.concat([{role:"user",content:"Let's wrap up. Please leave me my notes."}]),NOTES_SYSTEM):demoNotes();}catch(e){text=demoNotes();}
+  const n=loadNotes();n.unshift({date:new Date().toLocaleString(),text});
+  localStorage.setItem("sana_notes",JSON.stringify(n.slice(0,50)));
+  document.getElementById("notesLink").style.display="inline";
+  history=[];setState("idle");showNotes(text);updateSub();
+  speak("I've left you some notes to focus on. Be gentle with yourself, and come back whenever you like.");
+}
+function showNotes(latest){const c=document.getElementById("notesContent");
+  if(latest){c.innerHTML="<div class='body-txt'></div>";c.querySelector(".body-txt").textContent=latest;outText=latest;}
+  else{const all=loadNotes();c.innerHTML="";
+    if(!all.length)c.innerHTML="<p class='small'>No notes yet — wrap up a chat and I'll leave you some.</p>";
+    all.forEach((n,i)=>{const d=document.createElement("div");
+      d.innerHTML="<div class='entry-date'>"+n.date+"</div><div class='body-txt'></div>"+(i<all.length-1?"<div class='divider'></div>":"");
+      d.querySelector(".body-txt").textContent=n.text;c.appendChild(d);});
+    outText=all.map(n=>"Sana notes — "+n.date+"\n\n"+n.text).join("\n\n----------------\n\n");}
+  document.getElementById("shareBtn").style.display=navigator.share?"block":"none";
+  closeAll();document.getElementById("notes").classList.add("on");}
+function openNotes(){showNotes(null);}
+
+/* ============================ export ============================ */
+function downloadOut(name){const b=new Blob([outText||""],{type:"text/plain"});const a=document.createElement("a");
+  a.href=URL.createObjectURL(b);a.download=name+" "+new Date().toISOString().slice(0,10)+".txt";document.body.appendChild(a);a.click();a.remove();}
+function copyOut(){navigator.clipboard.writeText(outText||"").then(()=>{
+  ["copyBtn","copyBtnJ"].forEach(id=>{const b=document.getElementById(id);if(b&&b.offsetParent){b.textContent="Copied ✓";setTimeout(()=>b.textContent="Copy",1600);}});}).catch(()=>{});}
+function shareOut(){if(navigator.share)navigator.share({title:"Sana",text:outText||""}).catch(()=>{});}
+
+/* ============================ UI ============================ */
+function openSettings(){closeAll();document.getElementById("apiKey").value=cfg.apiKey;document.getElementById("model").value=cfg.model;loadVoices();fetchVoices();document.getElementById("settings").classList.add("on");}
+function saveSettings(){cfg.apiKey=document.getElementById("apiKey").value.trim();cfg.model=document.getElementById("model").value.trim()||"claude-sonnet-5";cfg.voice=document.getElementById("voiceSel").value||cfg.voice;var _ev=document.getElementById("evoiceSel");if(_ev)cfg.elevenVoice=_ev.value;saveCfg();setMode();closeAll();}
+function resetChat(){history=[];journalMode=false;document.getElementById("you").textContent="";closeAll();setState("idle");updateSub();greet();}
+function openHelp(){closeAll();document.getElementById("help").classList.add("on");}
+function closeAll(){document.querySelectorAll(".scrim").forEach(s=>s.classList.remove("on"));}
+function greet(){const back=loadNotes().length||loadJournal().length;
+  speak(back?pick(["Welcome back. How are you arriving today?","Good to see you again. How have things been since we talked?"])
+            :pick(["How are you?","What brings you here today?","It's good to see you. How are you, really?"]));}
+function startApp(){ensureAudio();closeAll();localStorage.setItem("sana_seen","1");
+  speak("Before we start - I promise I'll never sell your data, ever. Now, how are you?");}
+
+document.getElementById("micBtn").onclick=toggleMic;
+document.getElementById("sendBtn").onclick=()=>{ensureAudio();handle(document.getElementById("txt").value);};
+document.getElementById("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){ensureAudio();handle(e.target.value);}});
+
+/* ============================ boot ============================ */
+async function fetchVoices(){try{const r=await fetch("/voices",{cache:"no-store"});if(!r.ok)return;const j=await r.json();const s=document.getElementById("evoiceSel");if(!s)return;s.innerHTML="";(j.voices||[]).forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.name;s.appendChild(o);});if(!cfg.elevenVoice)cfg.elevenVoice=j.default||"";s.value=cfg.elevenVoice;}catch(e){}}
+load();setMode();initRec();loadVoices();checkServer();fetchVoices();
+if(loadJournal().length)document.getElementById("journalLink").style.display="inline";
+if(loadNotes().length)document.getElementById("notesLink").style.display="inline";
+if(localStorage.getItem("sana_seen"))setTimeout(greet,400);
+else document.getElementById("welcome").classList.add("on");
+</script>
+</body>
+</html>
