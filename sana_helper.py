@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 """
-Sana local helper — serves the prototype, relays chat to Claude, speaks via ElevenLabs,
-runs the Layer-2 LLM risk classifier, AND (for friends-and-family testing) adds:
-  • a passcode + consent/disclaimer gate shown before anyone reaches the app
-  • an injected in-app feedback button that saves to sana_feedback.jsonl (conversations stay on-device)
-  • a daily request cap so a shared link can't run up your API bill
-
-Two-layer safety:
-  Layer 1 (in the app)  : fast keyword rules — instant, catches explicit/indirect ideation.
-  Layer 2 (here)        : an LLM reads each message for MEANING — catches veiled phrasing.
-If either flags risk, Sana routes the member to human help (988 / 741741 / 911).
-
-USAGE (Window 1) — set SANA_PASSCODE to turn the gate on when sharing:
-  pkill -9 -f sana_helper.py; sleep 1; cd ~/Downloads && SANA_PASSCODE="pick-a-word" \
-  ANTHROPIC_API_KEY="$(cat ~/.anthropic_key)" ELEVENLABS_API_KEY="$(cat ~/.sana_key)" \
-  ELEVENLABS_VOICE_ID="nf4MCGNSdM0hxM95ZBQR" python3 sana_helper.py
-(Leave SANA_PASSCODE off for solo local use and there's no gate.)
+Sana helper (deploy build) — serves the prototype, relays chat to Claude, speaks via ElevenLabs,
+runs the Layer-2 LLM risk classifier, and for shared testing adds:
+  • a passcode + consent/disclaimer gate (with voice picker) shown before anyone reaches the app
+  • an injected in-app feedback button with clear confirmation, saved to SANA_FEEDBACK_FILE
+  • tap-to-call/text crisis buttons when Sana routes to human help
+  • a daily request cap
+Runs on any always-on host: binds 0.0.0.0 and reads $PORT (e.g. Render). Secrets come from env vars.
 """
 import os, json, time, hashlib, urllib.request, urllib.error
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -30,9 +21,8 @@ ELEVEN_KEY   = os.environ.get("ELEVENLABS_API_KEY", "").strip()
 ELEVEN_VOICE = os.environ.get("ELEVENLABS_VOICE_ID", "").strip()
 ELEVEN_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_multilingual_v2").strip()
 
-# ---- sharing controls ----
-PASSCODE      = os.environ.get("SANA_PASSCODE", "").strip()          # empty => no gate (local use)
-DAILY_CAP     = int(os.environ.get("DAILY_CAP", "800"))              # max /chat calls per day
+PASSCODE      = os.environ.get("SANA_PASSCODE", "").strip()
+DAILY_CAP     = int(os.environ.get("DAILY_CAP", "800"))
 FEEDBACK_FILE = os.environ.get("SANA_FEEDBACK_FILE", "sana_feedback.jsonl")
 COOKIE_TOKEN  = hashlib.sha256(("sana|" + PASSCODE).encode()).hexdigest()[:20]
 _day = {"date": "", "n": 0}
@@ -42,8 +32,8 @@ VOICES = [
     {"id": "nf4MCGNSdM0hxM95ZBQR", "name": "Warm"},
     {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Gentle"},
     {"id": "XB0fDUnXU5powFXDhCwa", "name": "Calm"},
-    {"id": "pNInz6obpgDQGcFmaJgB", "name": "Steady (male)"},
-    {"id": "TxGEqnHWrfWFTfGW9XjX", "name": "Deep (male)"},
+    {"id": "bfGb7JTLUnZebZRiFYyq", "name": "Steady (male)"},
+    {"id": "Rsz5u2Huh1hPlPr0oxRQ", "name": "Deep (male)"},
 ]
 _VOICE_IDS = {v["id"] for v in VOICES}
 
@@ -68,7 +58,6 @@ CLASSIFY_SYSTEM = ("You are a safety classifier for a mental-wellness app. Read 
  "'my phone is dead'. Reply with ONLY a JSON object and nothing else: {\"route\": true} if there is any risk signal, "
  "otherwise {\"route\": false}.")
 
-# --------------------------------------------------------------- consent / passcode gate page
 GATE_PAGE = """<!doctype html><html><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sana — private preview</title>
@@ -106,8 +95,8 @@ GATE_PAGE = """<!doctype html><html><head><meta charset="utf-8">
      <option value="nf4MCGNSdM0hxM95ZBQR">Warm</option>
      <option value="EXAVITQu4vr4xnSDxMaL">Gentle</option>
      <option value="XB0fDUnXU5powFXDhCwa">Calm</option>
-     <option value="pNInz6obpgDQGcFmaJgB">Steady (male)</option>
-     <option value="TxGEqnHWrfWFTfGW9XjX">Deep (male)</option>
+     <option value="bfGb7JTLUnZebZRiFYyq">Steady (male)</option>
+     <option value="Rsz5u2Huh1hPlPr0oxRQ">Deep (male)</option>
    </select>
    <button id="btn" type="submit" disabled>Enter</button>
    <div class="err" id="err"></div>
@@ -122,7 +111,6 @@ GATE_PAGE = """<!doctype html><html><head><meta charset="utf-8">
    return false;}
 </script></body></html>"""
 
-# --------------------------------------------------------------- injected feedback widget
 FEEDBACK_WIDGET = """
 <div id="mm-fb-btn" style="position:fixed;right:16px;bottom:16px;z-index:99999;background:#5b8cff;color:#fff;
  padding:10px 14px;border-radius:20px;font:600 14px -apple-system,Segoe UI,Roboto,sans-serif;cursor:pointer;
@@ -218,11 +206,7 @@ class Handler(BaseHTTPRequestHandler):
     def _authed(self):
         if not PASSCODE:
             return True
-        cookie = self.headers.get("Cookie", "")
-        for part in cookie.split(";"):
-            if part.strip().startswith("sana_ok="):
-                return part.strip()[len("sana_ok="):] == COOKIE_TOKEN
-        return False
+        return self._cookie("sana_ok") == COOKIE_TOKEN
 
     def do_GET(self):
         if self.path in ("/", "/index.html") or self.path.startswith("/MeritMind"):
@@ -328,13 +312,11 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     voice = "human voice ON (ElevenLabs)" if (ELEVEN_KEY and ELEVEN_VOICE) else "browser voice"
     clf = "risk classifier ON" if KEY else "classifier OFF (no key)"
-    gate = f"gate ON (passcode set)" if PASSCODE else "gate OFF (local mode)"
+    gate = "gate ON (passcode set)" if PASSCODE else "gate OFF (local mode)"
     print("\n  Sana helper running - Claude: " + ("LIVE" if KEY else "no key") +
           " | Voice: " + voice + " | Safety: " + clf)
     print("  Sharing   - " + gate + f" | daily cap: {DAILY_CAP} | feedback -> {FEEDBACK_FILE}")
-    print(f"  -> Local:  http://localhost:{PORT}/")
-    if PASSCODE:
-        print("  -> To share: run a tunnel (see notes) and give friends the https URL + passcode.")
+    print(f"  -> Listening on 0.0.0.0:{PORT}")
     print("  -> Press Ctrl+C to stop.\n")
     try:
         HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
