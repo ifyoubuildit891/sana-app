@@ -28,10 +28,10 @@ COOKIE_TOKEN  = hashlib.sha256(("sana|" + PASSCODE).encode()).hexdigest()[:20]
 _day = {"date": "", "n": 0}
 
 VOICES = [
-    {"id": "XrExE9yKIg1WjnnlVkGX", "name": "Friendly"},
     {"id": "nf4MCGNSdM0hxM95ZBQR", "name": "Warm"},
-    {"id": "EXAVITQu4vr4xnSDxMaL", "name": "Gentle"},
-    {"id": "XB0fDUnXU5powFXDhCwa", "name": "Calm"},
+    {"id": "gJx1vCzNCD1EQHT212Ls", "name": "Clear"},
+    {"id": "kdmDKE6EkgrWrrykO9Qt", "name": "Friendly"},
+    {"id": "EST9Ui6982FZPSi7gCHi", "name": "Gentle"},
     {"id": "bfGb7JTLUnZebZRiFYyq", "name": "Steady (male)"},
     {"id": "Rsz5u2Huh1hPlPr0oxRQ", "name": "Deep (male)"},
 ]
@@ -91,10 +91,10 @@ GATE_PAGE = """<!doctype html><html><head><meta charset="utf-8">
      <span>I understand Sana is an AI, not medical or crisis care, and I agree to try this preview and share feedback.</span></label>
    <label class="chk" style="display:block;color:#c7d2ec;margin:8px 0 2px">Choose Sana's voice:</label>
    <select id="voice" style="width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #34406e;background:#0d1122;color:#fff;font-size:15px;margin-bottom:4px">
-     <option value="XrExE9yKIg1WjnnlVkGX" selected>Friendly</option>
-     <option value="nf4MCGNSdM0hxM95ZBQR">Warm</option>
-     <option value="EXAVITQu4vr4xnSDxMaL">Gentle</option>
-     <option value="XB0fDUnXU5powFXDhCwa">Calm</option>
+     <option value="nf4MCGNSdM0hxM95ZBQR" selected>Warm</option>
+     <option value="gJx1vCzNCD1EQHT212Ls">Clear</option>
+     <option value="kdmDKE6EkgrWrrykO9Qt">Friendly</option>
+     <option value="EST9Ui6982FZPSi7gCHi">Gentle</option>
      <option value="bfGb7JTLUnZebZRiFYyq">Steady (male)</option>
      <option value="Rsz5u2Huh1hPlPr0oxRQ">Deep (male)</option>
    </select>
@@ -172,7 +172,7 @@ def anthropic_reply(messages, model, system):
 def eleven_tts(text, voice_id=None):
     vid = voice_id if voice_id in _VOICE_IDS else ELEVEN_VOICE
     url = (f"https://api.elevenlabs.io/v1/text-to-speech/{vid}/stream"
-           f"?optimize_streaming_latency=2&output_format=mp3_44100_128")
+           f"?optimize_streaming_latency=0&output_format=mp3_44100_128")
     body = json.dumps({"text": text, "model_id": ELEVEN_MODEL,
         "voice_settings": {"stability": 0.40, "similarity_boost": 0.85, "style": 0.35, "use_speaker_boost": True}}).encode()
     req = urllib.request.Request(url, data=body, method="POST", headers={
