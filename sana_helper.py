@@ -27,11 +27,12 @@ FEEDBACK_FILE = os.environ.get("SANA_FEEDBACK_FILE", "sana_feedback.jsonl")
 COOKIE_TOKEN  = hashlib.sha256(("sana|" + PASSCODE).encode()).hexdigest()[:20]
 _day = {"date": "", "n": 0}
 
+# Order shown in the picker. "Gentle" (Elise) is the default (see selected option + ELEVENLABS_VOICE_ID env).
 VOICES = [
+    {"id": "EST9Ui6982FZPSi7gCHi", "name": "Gentle"},
     {"id": "nf4MCGNSdM0hxM95ZBQR", "name": "Warm"},
     {"id": "gJx1vCzNCD1EQHT212Ls", "name": "Clear"},
     {"id": "kdmDKE6EkgrWrrykO9Qt", "name": "Friendly"},
-    {"id": "EST9Ui6982FZPSi7gCHi", "name": "Gentle"},
     {"id": "bfGb7JTLUnZebZRiFYyq", "name": "Steady (male)"},
     {"id": "Rsz5u2Huh1hPlPr0oxRQ", "name": "Deep (male)"},
 ]
@@ -91,10 +92,10 @@ GATE_PAGE = """<!doctype html><html><head><meta charset="utf-8">
      <span>I understand Sana is an AI, not medical or crisis care, and I agree to try this preview and share feedback.</span></label>
    <label class="chk" style="display:block;color:#c7d2ec;margin:8px 0 2px">Choose Sana's voice:</label>
    <select id="voice" style="width:100%;box-sizing:border-box;padding:11px;border-radius:10px;border:1px solid #34406e;background:#0d1122;color:#fff;font-size:15px;margin-bottom:4px">
-     <option value="nf4MCGNSdM0hxM95ZBQR" selected>Warm</option>
+     <option value="EST9Ui6982FZPSi7gCHi" selected>Gentle</option>
+     <option value="nf4MCGNSdM0hxM95ZBQR">Warm</option>
      <option value="gJx1vCzNCD1EQHT212Ls">Clear</option>
      <option value="kdmDKE6EkgrWrrykO9Qt">Friendly</option>
-     <option value="EST9Ui6982FZPSi7gCHi">Gentle</option>
      <option value="bfGb7JTLUnZebZRiFYyq">Steady (male)</option>
      <option value="Rsz5u2Huh1hPlPr0oxRQ">Deep (male)</option>
    </select>
