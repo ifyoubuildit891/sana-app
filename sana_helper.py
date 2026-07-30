@@ -266,8 +266,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 n = int(self.headers.get("Content-Length", "0"))
                 d = json.loads(self.rfile.read(n) or "{}")
+                req_v = d.get("voice_id")
                 cv = self._cookie("sana_voice")
-                vid = cv if cv in _VOICE_IDS else d.get("voice_id")
+                vid = req_v if req_v in _VOICE_IDS else (cv if cv in _VOICE_IDS else ELEVEN_VOICE)
                 self._send(200, eleven_tts(d.get("text", ""), vid), "audio/mpeg"); return
             except urllib.error.HTTPError as e:
                 self._send(502, "elevenlabs " + str(e.code) + ": " + e.read().decode()[:150], "text/plain"); return

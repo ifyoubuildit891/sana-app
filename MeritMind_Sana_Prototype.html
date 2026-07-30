@@ -481,7 +481,7 @@ document.getElementById("sendBtn").onclick=()=>{ensureAudio();handle(document.ge
 document.getElementById("txt").addEventListener("keydown",e=>{if(e.key==="Enter"){ensureAudio();handle(e.target.value);}});
 
 /* ============================ boot ============================ */
-async function fetchVoices(){try{const r=await fetch("/voices",{cache:"no-store"});if(!r.ok)return;const j=await r.json();const s=document.getElementById("evoiceSel");if(!s)return;s.innerHTML="";(j.voices||[]).forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.name;s.appendChild(o);});if(!cfg.elevenVoice)cfg.elevenVoice=j.default||"";s.value=cfg.elevenVoice;}catch(e){}}
+async function fetchVoices(){try{const r=await fetch("/voices",{cache:"no-store"});if(!r.ok)return;const j=await r.json();const s=document.getElementById("evoiceSel");if(!s)return;s.innerHTML="";const ids=[];(j.voices||[]).forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.name;s.appendChild(o);ids.push(v.id);});const ck=(document.cookie.match(/sana_voice=([^;]+)/)||[])[1]||"";if(!cfg.elevenVoice||ids.indexOf(cfg.elevenVoice)<0)cfg.elevenVoice=(ids.indexOf(ck)>=0?ck:(j.default||""));s.value=cfg.elevenVoice;saveCfg();}catch(e){}}
 load();setMode();initRec();loadVoices();checkServer();fetchVoices();
 if(loadJournal().length)document.getElementById("journalLink").style.display="inline";
 if(loadNotes().length)document.getElementById("notesLink").style.display="inline";
